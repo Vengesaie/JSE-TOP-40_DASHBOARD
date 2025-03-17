@@ -16,7 +16,7 @@ def load_data(tickers):
 
     for ticker in jse_top40:
         try:
-        stock_data = yf.download(ticker, start=start_date, end=end_date)
+            stock_data = yf.download(ticker, start=start_date, end=end_date)
         if stock_data.empty:
             st.warning(f"No data found for {ticker}")
         else:
