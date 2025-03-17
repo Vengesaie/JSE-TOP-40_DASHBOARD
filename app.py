@@ -25,11 +25,33 @@ if st.button("Show JSE Top 40 Firms"):
     st.write(pd.DataFrame({'Company': jse_top40}))
 
 # Button 2: Show Daily Returns
+
 if st.button("Show Daily Return Comparisons"):
     data = load_data(jse_top40)
-    daily_returns = {ticker: ((data[ticker]['Close'].iloc[-1] - data[ticker]['Close'].iloc[-2]) / data[ticker]['Close'].iloc[-2]) * 100 for ticker in jse_top40}
-    returns_df = pd.DataFrame.from_dict(daily_returns, orient='index', columns=['Daily Return (%)']).sort_values(by='Daily Return (%)', ascending=False)
-    st.bar_chart(returns_df)
+    daily_returns = {}
+
+    for ticker in jse_top40:
+        try:
+            # Ensure we have at least 2 rows of data
+            if len(data[ticker]['Close']) >= 2:
+                today_price = data[ticker]['Close'].iloc[-1]
+                prev_price = data[ticker]['Close'].iloc[-2]
+                daily_return = ((today_price - prev_price) / prev_price) * 100
+                daily_returns[ticker] = daily_return
+            else:
+                st.warning(f"Not enough data for {ticker}")
+        except Exception as e:
+            st.error(f"Error fetching data for {ticker}: {e}")
+
+    if daily_returns:
+        returns_df = pd.DataFrame.from_dict(
+            daily_returns, orient='index', columns=['Daily Return (%)']
+        ).sort_values(by='Daily Return (%)', ascending=False)
+
+        st.bar_chart(returns_df)
+    else:
+        st.error("No valid data available for returns comparison.")
+
 
 # Button 3: Show Top Performers
 if st.button("Show Top Performers"):
