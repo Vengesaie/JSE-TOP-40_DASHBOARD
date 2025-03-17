@@ -14,13 +14,17 @@ def load_data(tickers):
     start_date = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')  # Get more days to avoid missing data
     data = {}
 
-    for ticker in jse_top40:
-        try:
-            stock_data = yf.download(ticker, start=start_date, end=end_date)
+    # Loop through tickers and fetch data
+for ticker in jse_top40:
+    try:
+        stock_data = yf.download(ticker, start="2024-03-01", end="2024-03-17")
+
+        # Check if data is empty
         if stock_data.empty:
             st.warning(f"No data found for {ticker}")
         else:
             data[ticker] = stock_data
+
     except Exception as e:
         st.error(f"Failed to fetch data for {ticker}: {e}")
     return data
