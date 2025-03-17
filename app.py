@@ -14,20 +14,19 @@ def load_data(tickers):
     start_date = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')  # Get more days to avoid missing data
     data = {}
 
-    for ticker in tickers:
-        try:
-            stock_data = yf.download(ticker, start=start_date, end=end_date)
-            if stock_data.empty:
-                st.warning(f"No data found for {ticker}")
-            else:
-                data[ticker] = stock_data
-        except Exception as e:
-            st.error(f"Failed to fetch {ticker}: {e}")
-
+    for ticker in jse_top40:
+    try:
+        stock_data = yf.download(ticker, start=start_date, end=end_date)
+        if stock_data.empty:
+            st.warning(f"No data found for {ticker}")
+        else:
+            data[ticker] = stock_data
+    except Exception as e:
+        st.error(f"Failed to fetch data for {ticker}: {e}")
     return data
 
 # Define JSE Top 40 companies (using placeholder tickers)
-jse_top40 = ['NPN.JO', 'MTN.JO', 'SOL.JO', 'BHP.JO', 'ABG.JO']  # Add more tickers
+jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO', ...]  # Ensure all tickers are correct
 
 # Heading
 st.title("📈 JSE Top 40 Performance Dashboard")
