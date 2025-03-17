@@ -26,8 +26,9 @@ def load_data(tickers):
     return data
 
 # Define JSE Top 40 companies (using placeholder tickers)
-jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO', ...]  # Ensure all tickers are correct
+jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO']  # Ensure your ticker symbols are correct
 
+data = {}
 # Heading
 st.title("📈 JSE Top 40 Performance Dashboard")
 
@@ -43,18 +44,19 @@ if st.button("Show Daily Return Comparisons"):
     data = load_data(jse_top40)
     daily_returns = {}
 
-    for ticker in jse_top40:
-        try:
-            # Ensure we have at least 2 closing prices
-            if 'Close' in data[ticker] and len(data[ticker]['Close']) >= 2:
-                today_price = data[ticker]['Close'].iloc[-1]
-                prev_price = data[ticker]['Close'].iloc[-2]
-                daily_return = ((today_price - prev_price) / prev_price) * 100
-                daily_returns[ticker] = daily_return
-            else:
-                st.warning(f"Not enough data for {ticker} (only {len(data[ticker])} rows)")
-        except Exception as e:
-            st.error(f"Error with {ticker}: {e}")
+   # Loop through tickers and fetch data
+for ticker in jse_top40:
+    try:
+        stock_data = yf.download(ticker, start="2024-03-01", end="2024-03-17")
+        
+        # Check if data is empty
+        if stock_data.empty:
+            st.warning(f"No data found for {ticker}")
+        else:
+            data[ticker] = stock_data
+
+    except Exception as e:
+        st.error(f"Failed to fetch data for {ticker}: {e}")
 
     # Display returns if data exists
     if daily_returns:
