@@ -27,7 +27,7 @@ for ticker in jse_top40:
 
     except Exception as e:
         st.error(f"Failed to fetch data for {ticker}: {e}")
-    return data
+        return data
 
 # Define JSE Top 40 companies (using placeholder tickers)
 jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO']  # Ensure your ticker symbols are correct
