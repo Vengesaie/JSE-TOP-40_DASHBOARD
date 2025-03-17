@@ -3,14 +3,27 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime, timedelta
 
 # Set page config
 st.set_page_config(page_title="JSE Top 40 Performance Dashboard", layout="wide")
 
-# Load data
-@st.cache_data
+# Load data function
 def load_data(tickers):
-    data = {ticker: yf.download(ticker, period='7d', interval='1d') for ticker in tickers}
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')  # Get more days to avoid missing data
+    data = {}
+
+    for ticker in tickers:
+        try:
+            stock_data = yf.download(ticker, start=start_date, end=end_date)
+            if stock_data.empty:
+                st.warning(f"No data found for {ticker}")
+            else:
+                data[ticker] = stock_data
+        except Exception as e:
+            st.error(f"Failed to fetch {ticker}: {e}")
+
     return data
 
 # Define JSE Top 40 companies (using placeholder tickers)
@@ -26,23 +39,25 @@ if st.button("Show JSE Top 40 Firms"):
 
 # Button 2: Show Daily Returns
 
+# Button: Show Daily Returns Comparison
 if st.button("Show Daily Return Comparisons"):
     data = load_data(jse_top40)
     daily_returns = {}
 
     for ticker in jse_top40:
         try:
-            # Ensure we have at least 2 rows of data
-            if len(data[ticker]['Close']) >= 2:
+            # Ensure we have at least 2 closing prices
+            if 'Close' in data[ticker] and len(data[ticker]['Close']) >= 2:
                 today_price = data[ticker]['Close'].iloc[-1]
                 prev_price = data[ticker]['Close'].iloc[-2]
                 daily_return = ((today_price - prev_price) / prev_price) * 100
                 daily_returns[ticker] = daily_return
             else:
-                st.warning(f"Not enough data for {ticker}")
+                st.warning(f"Not enough data for {ticker} (only {len(data[ticker])} rows)")
         except Exception as e:
-            st.error(f"Error fetching data for {ticker}: {e}")
+            st.error(f"Error with {ticker}: {e}")
 
+    # Display returns if data exists
     if daily_returns:
         returns_df = pd.DataFrame.from_dict(
             daily_returns, orient='index', columns=['Daily Return (%)']
@@ -50,7 +65,7 @@ if st.button("Show Daily Return Comparisons"):
 
         st.bar_chart(returns_df)
     else:
-        st.error("No valid data available for returns comparison.")
+        st.error("No valid data available for return comparisons.")
 
 
 # Button 3: Show Top Performers
