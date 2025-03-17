@@ -16,16 +16,12 @@ def fetch_jse_data(tickers, start_date="2024-03-01", end_date="2024-03-17"):
     for ticker in tickers:
         try:
             stock_data = yf.download(ticker, start=start_date, end=end_date)
-            
-            # Check if data is empty
             if stock_data.empty:
                 st.warning(f"No data found for {ticker}")
             else:
                 data[ticker] = stock_data
-
         except Exception as e:
             st.error(f"Failed to fetch data for {ticker}: {e}")
-
     return data
 
 # Function to calculate daily returns
@@ -39,16 +35,21 @@ def calculate_daily_returns(data):
             st.error(f"Error calculating returns for {ticker}: {e}")
     return daily_returns
 
-# Function to plot stock performance
-def plot_performance(data):
-    plt.figure(figsize=(10, 6))
-    for ticker, df in data.items():
-        plt.plot(df['Close'], label=ticker)
-    plt.legend()
-    plt.title("JSE Top 40 Stock Price Trends")
-    plt.xlabel("Date")
-    plt.ylabel("Stock Price (ZAR)")
-    st.pyplot(plt)
+# Function to calculate RSI
+def calculate_rsi(data, period=14):
+    delta = data['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+# Function to calculate MACD
+def calculate_macd(data):
+    short_ema = data['Close'].ewm(span=12, adjust=False).mean()
+    long_ema = data['Close'].ewm(span=26, adjust=False).mean()
+    macd = short_ema - long_ema
+    signal = macd.ewm(span=9, adjust=False).mean()
+    return macd, signal
 
 # Load the data
 data = fetch_jse_data(jse_top40)
@@ -78,10 +79,40 @@ selected_stock = st.selectbox("Choose a stock", jse_top40)
 
 if selected_stock and selected_stock in data:
     st.line_chart(data[selected_stock]['Close'])
-else:
-    st.warning("Please select a valid stock.")
+    
+    # Calculate and show RSI
+    data[selected_stock]['RSI'] = calculate_rsi(data[selected_stock])
+    st.line_chart(data[selected_stock]['RSI'], use_container_width=True)
 
-# Plot performance visualization
+    # Calculate and show MACD
+    macd, signal = calculate_macd(data[selected_stock])
+    plt.figure(figsize=(10, 4))
+    plt.plot(macd, label='MACD', color='blue')
+    plt.plot(signal, label='Signal', color='orange')
+    plt.legend()
+    st.pyplot(plt)
+
+# Generate Performance Heatmap
+if st.button("Generate Performance Heatmap"):
+    returns_df = pd.DataFrame({ticker: data[ticker]['Daily Return'] for ticker in jse_top40})
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(returns_df.corr(), annot=True, cmap='coolwarm')
+    st.pyplot(plt)
+
+# Export data to CSV
+if st.button("Export Data to CSV"):
+    combined_data = pd.concat([data[ticker]['Close'] for ticker in jse_top40], axis=1)
+    combined_data.columns = jse_top40
+    combined_data.to_csv('jse_top40_data.csv')
+    st.success("Data exported to CSV successfully!")
+
+# Performance visualization
 if st.button("Visualize Performance"):
-    if data:
-        plot_performance(data)
+    plt.figure(figsize=(10, 6))
+    for ticker, df in data.items():
+        plt.plot(df['Close'], label=ticker)
+    plt.legend()
+    plt.title("JSE Top 40 Stock Price Trends")
+    plt.xlabel("Date")
+    plt.ylabel("Stock Price (ZAR)")
+    st.pyplot(plt)
