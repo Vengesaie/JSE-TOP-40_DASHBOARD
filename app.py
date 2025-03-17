@@ -3,27 +3,20 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import datetime, timedelta
 
-# Set page config
-st.set_page_config(page_title="JSE Top 40 Performance Dashboard", layout="wide")
+# Set the Streamlit app title
+st.title("JSE Top 40 Performance Dashboard")
 
-# Load data function
-def load_data(tickers):
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')  # Get more days to avoid missing data
-    data = {}
+# List of JSE Top 40 tickers
+jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO', 'NPN.JO', 'CFR.JO']
 
-   import yfinance as yf
-import streamlit as st
-
-# Define a function to fetch JSE Top 40 data
-def fetch_jse_data(tickers):
+# Define function to fetch data from Yahoo Finance
+def fetch_jse_data(tickers, start_date="2024-03-01", end_date="2024-03-17"):
     data = {}
     for ticker in tickers:
         try:
-            stock_data = yf.download(ticker, start="2024-03-01", end="2024-03-17")
-
+            stock_data = yf.download(ticker, start=start_date, end=end_date)
+            
             # Check if data is empty
             if stock_data.empty:
                 st.warning(f"No data found for {ticker}")
@@ -35,84 +28,60 @@ def fetch_jse_data(tickers):
 
     return data
 
-# List of JSE Top 40 tickers
-jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO']  # Ensure tickers are correct
+# Function to calculate daily returns
+def calculate_daily_returns(data):
+    daily_returns = {}
+    for ticker, df in data.items():
+        try:
+            df['Daily Return'] = df['Close'].pct_change() * 100
+            daily_returns[ticker] = df['Daily Return'].iloc[-1]
+        except Exception as e:
+            st.error(f"Error calculating returns for {ticker}: {e}")
+    return daily_returns
 
-# Fetch data by calling the function
+# Function to plot stock performance
+def plot_performance(data):
+    plt.figure(figsize=(10, 6))
+    for ticker, df in data.items():
+        plt.plot(df['Close'], label=ticker)
+    plt.legend()
+    plt.title("JSE Top 40 Stock Price Trends")
+    plt.xlabel("Date")
+    plt.ylabel("Stock Price (ZAR)")
+    st.pyplot(plt)
+
+# Load the data
 data = fetch_jse_data(jse_top40)
 
-# Display success message and data preview
-if data:
-    st.success("Data successfully loaded!")
-    st.write("Tickers loaded:", list(data.keys()))
-else:
-    st.error("No data fetched for any ticker.")
+# Display buttons for user interaction
+if st.button("Show JSE Top 40 Companies"):
+    st.write("Loaded companies:", list(data.keys()))
 
-
-data = {}
-# Heading
-st.title("📈 JSE Top 40 Performance Dashboard")
-
-# Button 1: Show JSE Top 40 Firms
-if st.button("Show JSE Top 40 Firms"):
-    st.write("### JSE Top 40 Companies")
-    st.write(pd.DataFrame({'Company': jse_top40}))
-
-# Button 2: Show Daily Returns
-
-# Button: Show Daily Returns Comparison
 if st.button("Show Daily Return Comparisons"):
-    data = load_data(jse_top40)
-    daily_returns = {}
+    if data:
+        daily_returns = calculate_daily_returns(data)
+        returns_df = pd.DataFrame(list(daily_returns.items()), columns=["Ticker", "Daily Return (%)"])
+        returns_df = returns_df.sort_values(by="Daily Return (%)", ascending=False)
+        st.dataframe(returns_df)
 
-   # Loop through tickers and fetch data
-for ticker in jse_top40:
-    try:
-        stock_data = yf.download(ticker, start="2024-03-01", end="2024-03-17")
-        
-        # Check if data is empty
-        if stock_data.empty:
-            st.warning(f"No data found for {ticker}")
-        else:
-            data[ticker] = stock_data
+if st.button("Rank Top Performers"):
+    if data:
+        daily_returns = calculate_daily_returns(data)
+        sorted_stocks = sorted(daily_returns.items(), key=lambda x: x[1], reverse=True)
+        st.write("Top Performers:")
+        for rank, (ticker, return_) in enumerate(sorted_stocks[:5], 1):
+            st.write(f"{rank}. {ticker}: {return_:.2f}%")
 
-    except Exception as e:
-        st.error(f"Failed to fetch data for {ticker}: {e}")
+# Historical price view per stock
+st.write("Select a stock to view its historical prices:")
+selected_stock = st.selectbox("Choose a stock", jse_top40)
 
-    # Display returns if data exists
-    if daily_returns:
-        returns_df = pd.DataFrame.from_dict(
-            daily_returns, orient='index', columns=['Daily Return (%)']
-        ).sort_values(by='Daily Return (%)', ascending=False)
+if selected_stock and selected_stock in data:
+    st.line_chart(data[selected_stock]['Close'])
+else:
+    st.warning("Please select a valid stock.")
 
-        st.bar_chart(returns_df)
-    else:
-        st.error("No valid data available for return comparisons.")
-
-
-# Button 3: Show Top Performers
-if st.button("Show Top Performers"):
-    data = load_data(jse_top40)
-    performance_df = pd.DataFrame({
-        'Company': jse_top40,
-        'Last Price': [data[ticker]['Close'].iloc[-1] for ticker in jse_top40],
-        'Daily Return (%)': [(data[ticker]['Close'].iloc[-1] - data[ticker]['Close'].iloc[-2]) / data[ticker]['Close'].iloc[-2] * 100 for ticker in jse_top40]
-    }).sort_values(by='Daily Return (%)', ascending=False)
-    st.write("### Top Performing Stocks")
-    st.dataframe(performance_df)
-
-    # Allow clicking individual stocks
-    stock_choice = st.selectbox("Select a stock to view historical prices:", performance_df['Company'])
-    if stock_choice:
-        st.line_chart(data[stock_choice]['Close'])
-
-# Styling
-st.markdown("""
-    <style>
-        .stButton button { background-color: #4CAF50; color: white; font-size: 18px; border-radius: 8px; }
-        .stTitle { color: #4CAF50; }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.write("---")
-st.write("📍 *Powered by Yahoo Finance and Streamlit*")
+# Plot performance visualization
+if st.button("Visualize Performance"):
+    if data:
+        plot_performance(data)
