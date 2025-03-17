@@ -14,23 +14,40 @@ def load_data(tickers):
     start_date = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')  # Get more days to avoid missing data
     data = {}
 
-    # Loop through tickers and fetch data
-for ticker in jse_top40:
-    try:
-        stock_data = yf.download(ticker, start="2024-03-01", end="2024-03-17")
+   import yfinance as yf
+import streamlit as st
 
-        # Check if data is empty
-        if stock_data.empty:
-            st.warning(f"No data found for {ticker}")
-        else:
-            data[ticker] = stock_data
+# Define a function to fetch JSE Top 40 data
+def fetch_jse_data(tickers):
+    data = {}
+    for ticker in tickers:
+        try:
+            stock_data = yf.download(ticker, start="2024-03-01", end="2024-03-17")
 
-    except Exception as e:
-        st.error(f"Failed to fetch data for {ticker}: {e}")
-        return data
+            # Check if data is empty
+            if stock_data.empty:
+                st.warning(f"No data found for {ticker}")
+            else:
+                data[ticker] = stock_data
 
-# Define JSE Top 40 companies (using placeholder tickers)
-jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO']  # Ensure your ticker symbols are correct
+        except Exception as e:
+            st.error(f"Failed to fetch data for {ticker}: {e}")
+
+    return data
+
+# List of JSE Top 40 tickers
+jse_top40 = ['BHG.JO', 'AGL.JO', 'SOL.JO']  # Ensure tickers are correct
+
+# Fetch data by calling the function
+data = fetch_jse_data(jse_top40)
+
+# Display success message and data preview
+if data:
+    st.success("Data successfully loaded!")
+    st.write("Tickers loaded:", list(data.keys()))
+else:
+    st.error("No data fetched for any ticker.")
+
 
 data = {}
 # Heading
