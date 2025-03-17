@@ -1,4 +1,3 @@
-pip install streamlit yfinance pandas matplotlib seaborn
 import streamlit as st
 import yfinance as yf
 import pandas as pd
